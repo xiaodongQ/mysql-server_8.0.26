@@ -437,13 +437,14 @@ struct Trx_shard {
 #ifndef UNIV_HOTBACKUP
 /** The transaction system central memory data structure. */
 struct trx_sys_t {
+  // 代码中有很多cache line对齐的处理，减少缓存污染（cache thrashing），提升性能
   /* Members protected by neither trx_sys_t::mutex nor serialisation_mutex. */
   char pad0[ut::INNODB_CACHE_LINE_SIZE];
 
   /** @{ */
 
   /** Multi version concurrency control manager */
-
+  // 多版本并发控制管理
   MVCC *mvcc;
 
   /** Vector of pointers to rollback segments. These rsegs are iterated
@@ -478,6 +479,7 @@ struct trx_sys_t {
   trx_sys_t::serialisation_mutex. Note: it might be in parallel
   used for both trx->id and trx->no assignments (for different
   trx_t objects). */
+  // 用于生成下一个事务ID
   std::atomic<trx_id_t> next_trx_id_or_no;
 
   /** @} */
@@ -493,17 +495,21 @@ struct trx_sys_t {
   /** Tracks minimal transaction id which has received trx->no, but has
   not yet finished commit for the mtr writing the trx commit. Protected
   by the serialisation_mutex. Ordered on the trx->no field. */
+  // 事务在完全提交之前会保持在这个列表中，确保事务的正确序列化顺序
   UT_LIST_BASE_NODE_T(trx_t, no_list) serialisation_list;
 
 #ifdef UNIV_DEBUG
   /** Max trx number of read-write transactions added for purge. */
+  // 当前活跃事务的最大事务号
   trx_id_t rw_max_trx_no;
 #endif /* UNIV_DEBUG */
 
+  // 确保下一个成员变量与前一个成员变量位于不同的缓存行上，以避免缓存竞争（cache contention）
   char pad3[ut::INNODB_CACHE_LINE_SIZE];
 
   /* The minimum trx->no inside the serialisation_list. Protected by
   the serialisation_mutex. Might be read without the mutex. */
+  // 用于管理事务序列化级别下的最小事务号。这在事务隔离级别为可重复读（REPEATABLE READ）或更高时尤为重要
   std::atomic<trx_id_t> serialisation_min_trx_no;
 
   /** @} */
@@ -518,6 +524,7 @@ struct trx_sys_t {
 
   /** Minimum trx->id of active RW transactions (minimum in the rw_trx_ids).
   Protected by the trx_sys_t::mutex but might be read without the mutex. */
+  // 当前系统中最旧活跃事务的事务ID，这对于确定哪些事务可以提交或回滚非常重要
   std::atomic<trx_id_t> min_active_trx_id;
 
   char pad5[ut::INNODB_CACHE_LINE_SIZE];
@@ -539,9 +546,12 @@ struct trx_sys_t {
   take a snapshot of these transactions whose changes are not visible to it.
   We should remove transactions from the list before committing in memory and
   releasing locks to ensure right order of removal and consistent snapshot. */
+  // 用于MVCC快照管理，存储当前活跃的读写事务ID
+  // 当一个事务创建一个ReadView时，它会基于rw_trx_ids中的事务ID创建一个快照（snapshot），这个快照决定了哪些更改对该事务是可见的
   trx_ids_t rw_trx_ids;
 
   /** Max trx id of read-write transactions which exist or existed. */
+  // 当前系统中的最大事务ID
   std::atomic<trx_id_t> rw_max_trx_id;
 
   char pad7[ut::INNODB_CACHE_LINE_SIZE];

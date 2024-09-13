@@ -293,6 +293,7 @@ class ReadView {
 
   /** Set of RW transactions that was active when this snapshot
   was taken */
+  // 创建 Read View 时，当前数据库中`活跃事务`（启动了但还没提交的事务）的事务id列表
   ids_t m_ids;
 
   /** The view does not need to see the undo logs for transactions

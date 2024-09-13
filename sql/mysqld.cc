@@ -6642,9 +6642,11 @@ static void calculate_mysql_home_from_my_progname() {
 #ifdef _WIN32
 int win_main(int argc, char **argv)
 #else
+// linux下的main函数
 int mysqld_main(int argc, char **argv)
 #endif
 {
+  // 处理进程名
   // Substitute the full path to the executable in argv[0]
   substitute_progpath(argv);
   sysd::notify_connect();
@@ -6662,6 +6664,7 @@ int mysqld_main(int argc, char **argv)
   pre_initialize_performance_schema();
 #endif /*WITH_PERFSCHEMA_STORAGE_ENGINE */
   // For windows, my_init() is called from the win specific mysqld_main
+  // my_init函数中设置了创建新文件、新目录的权限。mysql默认创建新文件、新目录的权限为0640、0750（UMASK和UMASK_DIR）
   if (my_init())  // init my_sys library & pthreads
   {
     LogErr(ERROR_LEVEL, ER_MYINIT_FAILED);
@@ -7786,6 +7789,7 @@ static bool default_service_handling(char **argv, const char *servicename,
   return 1;
 }
 
+// 此处main定义在Win32范围内（#if defined(_WIN32)）
 int mysqld_main(int argc, char **argv) {
   bool mysqld_monitor = false;
   mysqld_early_option = is_early_option(argc, argv);
